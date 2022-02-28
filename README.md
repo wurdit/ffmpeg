@@ -124,7 +124,7 @@ When trying different commands over and over to get the desired result, I usuall
 
 ## Just playing a file
 
-You can play a file with all of your options without actually saving it using `ffplay` instead of `ffmpeg`. This opens a new window with the video, but there is no way to pause, rewind or anything. You just watch and then close it. Most of the options are all the same, except you can't specify an output file. It also doesn't seem to support `-to`, and only supports `-t` instead. 
+You can play a file with all of your options without actually saving it using `ffplay` instead of `ffmpeg`. This opens a new window with the video, but there is no way to pause, rewind or anything. You just watch and then close it. Most of the options are all the same, except you can't specify an output file. It also doesn't seem to support `-to`, and only supports `-t` instead. It also only supports simple filtergraphs. More on complex filtergraphs later.
 
 `ffplay -i video.mp4`
 
