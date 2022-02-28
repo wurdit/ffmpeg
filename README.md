@@ -124,7 +124,7 @@ When trying different commands over and over to get the desired result, I usuall
 
 ## Just playing a file
 
-You can play a file with all of your options without actually saving it using `ffplay` instead of `ffmpeg`. The options are all the same, except you can't specify an output file. This opens a new window with the video, but there is no way to pause, rewind or anything. You just watch and then close it.
+You can play a file with all of your options without actually saving it using `ffplay` instead of `ffmpeg`. This opens a new window with the video, but there is no way to pause, rewind or anything. You just watch and then close it. Most of the options are all the same, except you can't specify an output file. It also doesn't seem to support `-to`, and only supports `-t` instead. 
 
 `ffplay -i video.mp4`
 
@@ -153,7 +153,7 @@ You'll see these in the exmples. You don't necessarily need to read and understa
 
 `-to [timestamp]` When to stop reading the video. Often used with `-ss` to only select a portion of a video. Example: `-ss 01:00 -to 01:05` to take just the 5 seconds between 01:00 and 01:05.
 
-`-t` Rather than t timestamp as in `-to`, you can specify a number of seconds to read after seeking, or from the start of a file.
+`-t` Rather than t timestamp as in `-to`, you can specify a number of seconds to read after seeking, or from the start of a file if not using seek.
 
 You'll see some of these in the examples.
 
@@ -190,6 +190,10 @@ If you don't want the whole video, you can use seek (`-ss`) and to (`-to`) to se
 This makes a 5 second GIF starting at 10 seconds into the video. You can combine this with video filters like the `framestep` above.
 
 `ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf framestep=5 five-seconds-choppy.gif`
+
+## Dealing with time issues
+
+My video is encoded in h264 which is a very advanced codec with keyframes and it doesn't support arbitrarily seeking to a specific frame with subsecond timing. I can't get it to seek 
 
 ## Making an optimized palette GIF
 
@@ -253,26 +257,53 @@ Result: https://i.imgur.com/6UyWyfb.png Perfect! No guesswork involved.
 
 In this example, I'll assume you are also cropping the video. If not, remove that filter. We're also building on our previous work, but skipping the palettegen for now.
 
-`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf scale=64:64 squished.gif`
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf scale=256:256 squished.gif`
 
 ### Automatic height
 
 This is basic scaling that will stretch or squish your video if it's not square. If you want to specify the width, but let ffmpeg calculate the height, use `-1` as the height.
 
-`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf scale=64:-1 scaled.gif`
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf scale=256:-1 scaled.gif`
 
-It uses bicubic interpolation by default. If you want to change that to the better one, lanczos, you can set that in the filter.
+It uses bicubic interpolation by default. If you want to change that to a better one, lanczos, you can set that in flags for the filter. There are other algorithms that might work better for pixel art or sharp lines.
 
-`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf scale=320:-1:flags=lanczos scaled.gif`
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf scale=256:-1:flags=lanczos scaled.gif`
 
 ### Adding our crop first
 
-Let's save a single frame to check our result, and make it 64 x 64 pixels for a small GIF. In this case, we cropped it to a square, so know the scaled height is going to be the same as the width, so we 
+Let's save a single frame to check our result, and make it 256 x 256 pixels for a medium sized GIF. In this case, we cropped it to a square, so know the scaled height is going to be the same as the width, so we can just specify `256:256` instead of `256:-1`, but the result is the same. I'm also going to stat using more accurate time specifications. Again, we dropped the `-to` and added `-frames:v 1` for a single frame output.
 
-`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf crop=580:580:477:301,scale=64:64:flags=lanczos -frames:v 1 scaled.png`
+`ffmpeg -ss 00:09.800 -i video.mp4 -vf crop=580:580:477:301,scale=256:256:flags=lanczos -frames:v 1 cropped-scaled.png`
+
+Here's the result: https://i.imgur.com/qJGtrAg.png That's exactly what I wanted.
+
+#### A note on finding a precise time stamp for -ss and -to
+
+You often don't care about absolute precision, but sometimes you do. It can be a pain to find the timestamp of the exact frame you want.
+
+In order to find this precise seek value, I used my media player, MPC-HC (Media Player Classic - Home Cinema) since it has a precise time display down to the millisecond. You can just use trial and error, if you prefer. MPC-HC no longer being supported, but the latest version works fine. I had to convert my 16 second video to an uncompressed format so I could framestep forward and backwards and still get accurate frame time stamps. Advanced codecs like h264 don't like playing backwards, so the timestamps become inaccurate as soon as you framestep backwards. I had to use a codec the internal LAV filters in MPC-HC supports, and v410 is one (Uncompressed 4:4:4 10-bit video). I also had to use an mkv container since mp4 doesn't support that codec.
+
+That's a lot of words for this tiny command:
+
+`ffmpeg -i video.mp4 -c:v v410 video.v410.mkv`.
+
+`c:v` means "codec for video". If you have a very large source video, the you will need to convert only a small section of the video to an uncompressed format with a few extra seconds on either end . Don't convert the whole video since the file size will be absolutely enourmous. **MY 16 SECOND VIDEO IS 3 GB!** Now that I have the times I wanted, for both `-ss` and `-to`, I can throw away this temporary video.
+
+If you don't have MPC-HC or want to install it, or have some other media player that can give you precise timestamps, you can use trial and error to find a very precise seek time and "to" time that's accurate to a single frame. It's not hard. Use what's called a "binary search" pattern. 
+
+1. Use your media player to find the MM:SS of about where you want to start and subtract one second from that. It should be a bunch of frames too early. 
+2. Add back 0.5 seconds and see if that's too far. 
+    * If it is, subtract 0.25 seconds and look again. 
+    * If it's not, *add* 0.25 seconds and look again
+      
+Each time, you are cutting the amount you add or subtract by half, homing in on your answer. It will find the answer in the minimum number of steps. Do this until the image is the same between two steps. then either value is your answer.
+
+I like MPC-HC for it's classic appearance and excellent features, including a precise time display. (If you right-click the time display and tell it to be precise.) In my case, the previous frame was 00:09.773. Anything between 00:09.800 and about 00:09.838 maps to the exact frame I wanted to start on, so you don't need to be *that* precise.
 
 
 
+ 
+ 
 
 
 
