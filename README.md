@@ -249,8 +249,27 @@ I'll make a new frame using this filter:
 
 Result: https://i.imgur.com/6UyWyfb.png Perfect! No guesswork involved.
 
+## Scaling the video
 
+In this example, I'll assume you are also cropping the video. If not, remove that filter. We're also building on our previous work, but skipping the palettegen for now.
 
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf scale=64:64 squished.gif`
+
+### Automatic height
+
+This is basic scaling that will stretch or squish your video if it's not square. If you want to specify the width, but let ffmpeg calculate the height, use `-1` as the height.
+
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf scale=64:-1 scaled.gif`
+
+It uses bicubic interpolation by default. If you want to change that to the better one, lanczos, you can set that in the filter.
+
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf scale=320:-1:flags=lanczos scaled.gif`
+
+### Adding our crop first
+
+Let's save a single frame to check our result, and make it 64 x 64 pixels for a small GIF. In this case, we cropped it to a square, so know the scaled height is going to be the same as the width, so we 
+
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf crop=580:580:477:301,scale=64:64:flags=lanczos -frames:v 1 scaled.png`
 
 
 
