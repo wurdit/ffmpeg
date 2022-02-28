@@ -273,15 +273,19 @@ It uses bicubic interpolation by default. If you want to change that to a better
 
 Let's save a single frame to check our result, and make it 256 x 256 pixels for a medium sized GIF. In this case, we cropped it to a square, so know the scaled height is going to be the same as the width, so we can just specify `256:256` instead of `256:-1`, but the result is the same. I'm also going to stat using more accurate time specifications. Again, we dropped the `-to` and added `-frames:v 1` for a single frame output.
 
-`ffmpeg -ss 00:09.800 -i video.mp4 -vf crop=580:580:477:301,scale=256:256:flags=lanczos -frames:v 1 cropped-scaled.png`
+`ffmpeg -ss 00:09.8 -i video.mp4 -vf crop=580:580:477:301,scale=256:256:flags=lanczos -frames:v 1 cropped-scaled.png`
 
 Here's the result: https://i.imgur.com/qJGtrAg.png That's exactly what I wanted.
 
-#### A note on finding a precise time stamp for -ss and -to
+Now let's make an unoptimized GIF to test all of this. We add back an a precise `-to`, and remove `-frames:v`.
 
-You often don't care about absolute precision, but sometimes you do. It can be a pain to find the timestamp of the exact frame you want.
+`ffmpeg -ss 00:09.8 -to 00:12.067 -i video.mp4 -vf crop=580:580:477:301,scale=256:256:flags=lanczos cropped-scaled.gif`
 
-In order to find this precise seek value, I used my media player, MPC-HC (Media Player Classic - Home Cinema) since it has a precise time display down to the millisecond. You can just use trial and error, if you prefer. MPC-HC no longer being supported, but the latest version works fine. I had to convert my 16 second video to an uncompressed format so I could framestep forward and backwards and still get accurate frame time stamps. Advanced codecs like h264 don't like playing backwards, so the timestamps become inaccurate as soon as you framestep backwards. I had to use a codec the internal LAV filters in MPC-HC supports, and v410 is one (Uncompressed 4:4:4 10-bit video). I also had to use an mkv container since mp4 doesn't support that codec.
+#### A long-winded note on finding a precise time stamp for -ss and -to
+
+You should probably just skip this section. You most often don't care about absolute precision. But sometimes you do, and it can be a pain to find the timestamp of the exact frame you want.
+
+In order to find this precise seek value, I used my media player, MPC-HC (Media Player Classic - Home Cinema) since it has a precise time display down to the millisecond. You can just use trial and error, if you prefer. More on that below. MPC-HC no longer being supported, but the latest version works fine. I had to convert my 16 second video to an uncompressed format so I could framestep forward and backwards and still get accurate frame time stamps. Advanced codecs like h264 don't like playing backwards, so the timestamps become inaccurate as soon as you framestep backwards. I had to use a codec the internal LAV filters in MPC-HC supports, and v410 is one (Uncompressed 4:4:4 10-bit video). I also had to use an mkv container since mp4 doesn't support that codec.
 
 That's a lot of words for this tiny command:
 
@@ -299,6 +303,16 @@ If you don't have MPC-HC or want to install it, or have some other media player 
 Each time, you are cutting the amount you add or subtract by half, homing in on your answer. It will find the answer in the minimum number of steps. Do this until the image is the same between two steps. then either value is your answer.
 
 I like MPC-HC for it's classic appearance and excellent features, including a precise time display. (If you right-click the time display and tell it to be precise.) In my case, the previous frame was 00:09.773. Anything between 00:09.800 and about 00:09.838 maps to the exact frame I wanted to start on, so you don't need to be *that* precise.
+
+## Putting everything together!
+
+We're so close! Time to add in the `palettegen` which requires we convert our crop and scale to the `-filter_complex` syntax. We'll do it in one step.
+
+`ffmpeg -ss 00:09.8 -to 00:12.067 -i video.mp4 -filter_complex crop=580:580:477:301,scale=256:256:flags=lanczos cropped-scaled.gif`
+
+"[0:v] palettegen [pal]; [0:v][pal] paletteuse"
+
+
 
 
 
