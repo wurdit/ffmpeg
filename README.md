@@ -1,9 +1,9 @@
 #  GIF-related tasks ffmpeg can do:
 
 1. Convert a video directly to a GIF with the default palette.
-2. Generate an optimized palette to be used in a second step to make a GIF.
+4. Convert a video (or part of one) to a GIF while using only every "Nth" frame (E.g., Every 3rd or 5th frame.)
 3. Convert ony a portion of a video to a GIF.
-4. Convert a video (or part of one) to a GIF while using only every "Nth" frame (3rd or 5th, etc.)
+2. Generate an optimized palette to be used in a second step to make a better looking GIF.
 5. Do any of the above while also cropping the video and/or resizing it to a specific size.
 7. Do any of the above using a video that's streamed off a website like YouTube or Twitch instead of having to download the whole thing.
     * I haven't actually tested Twitch yet, but it definitely works on YouTube if you know the actual raw video URL which youtube-dl can give you.
@@ -16,15 +16,15 @@ You must have ffmpeg installed and configured in Windows Path. If not, see [Inst
 
 ## Windows Terminal
 
-In Windows 10, I recommend installing "Windows Terminal" from the Microsoft Store. It's a new command line program with tabs, better fonts, and lots of features. It can be run the same as `cmd` but with `wt`. It's standard in Windows 11. Installing it adds "Open in Windows Terminal" to the right-click menu for folders and folder backgrounds, which is very handy. You will probably want to set your default console to Command Prompt instead of Windows Powershell in the settings.
+This is totally optional, but in Windows 10, I recommend installing "Windows Terminal" from the Microsoft Store. It's a new command line program with tabs, better fonts, and lots of features. It can be run the same as `cmd` but with `wt`. It's standard in Windows 11. Installing it adds "Open in Windows Terminal" to the right-click menu for folders and folder backgrounds, which is very handy. If you install it, you will probably want to set your default console to Command Prompt instead of Windows Powershell in its settings.
 
 ## Loading an input file
 
-Doing this without any output specified produces an error, "At least one output file must be specified", but before doing so it shows you the codec info for the video and/or audio, the duration, etc. This can be handy just to see these values.
+Doing this without any output specified produces an error, "At least one output file must be specified", but before the error it shows you the codec info for the video and/or audio, the duration, etc. This can be handy just to see these values.
 
 `ffmpeg -i "C:\path\to\your\video.mp4"`
 
-Quotes areonly required if there are spaces in the path. If the video is in the current directory, you can omit the path and just use the file name.
+Quotes are only required if there are spaces in the path. If the video is in the current directory, you can omit the path and just use the file name.
 
 `ffmpeg -i video.mp4`
 
@@ -85,7 +85,7 @@ Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'video.mp4':
 At least one output file must be specified
 ```
 
-In the examples later, I will omit the `-hide_banner` argument, but using it can be nice.
+In the examples, I will omit the `-hide_banner` argument, but using it can be nice.
 
 ## Output file
 
@@ -93,20 +93,22 @@ The last argument after all of the named ones is the output. (By "named", I mean
 
 `ffmpeg -i video.mp4 output.mkv`
 
-This will convert the video to an MKV container, for example. You Can specifiy whatever filename and extension you want, and ffmpeg will figure out what you want and how to do it.
+This will convert the video to an MKV container, for example. You can specifiy whatever filename and extension you want. ffmpeg will figure out how to make the file or files you asked for.
 
 To output the first frame of the video as an image, just output to a JPG or PNG with whatever name you want.
 
 `ffmpeg -i video.mp4 first-frame.jpg`
 
-That's not very useful, so here's a command to get all frames as a sequence of JPG files. I want them all in a subfolder, so I put the subfolder name then a slash, then the output file name. **NOTE**: You have to make the output folder first. I use `mkdir` here to do it. As always, use quotes if your path has spaces.
+That's not very useful, so here's a command to get *all* frames as a sequence of JPG files. I want them all in a subfolder, so I put the subfolder name then a slash, then the output file name. **NOTE**: You have to make the output folder first. I use `mkdir` here to do it. As always, use quotes if your path has spaces.
 
 ```
 mkdir frames
 ffmpeg -hide_banner -i video.mp4 frames\%6d.jpg
 ```
 
-Notice the odd filename. That's an automatic numbering scheme. It means just number each file as an integer. If it were `%d`, each file name would be an integer starting with 1. So, 1.jpg, 2.jpg... 10.jpg.... 42069.jpg. But if you want them to sort well in *all* programs, it's best to give them leading zeroes like 000001.jpg and 042069.jpg. That's what the 6 does in `%6d`. It pads the numbers with zeroes to make them at least 6 digits long. You can choose more or fewer leading zeroes based on how many frames your video has, or just pick an arbitrarily large number of them. A 5 hour video at 48 FPS is still under a million frames, so 6 is usually good enough.
+Now I have a folder full of hundreds of frames from my ~16 second video.
+
+Notice the odd filename. That's an automatic numbering scheme. It means "just number each file as an integer". If it were `%d`, the filenames would be 1.jpg, 2.jpg... 10.jpg.... 42069.jpg. But if you want them to sort well in all programs, it's best to give them leading zeroes like 000001.jpg and 042069.jpg. That's what the 6 does in `%6d`. It pads the numbers with zeroes to make them at least 6 digits long. You can choose more or fewer leading zeroes based on how many frames your video has, or just pick an arbitrarily large number of them. A 5 hour video at 48 FPS is still under a million frames, so 6 is usually good enough.
 
 ## Overwritting a file
 
@@ -124,6 +126,8 @@ You can play a file with all of your options without actually saving it using `f
 
 ## Some common arguments
 
+You'll see these in the exmples. You don't necessarily need to read and understand all of these just yet.
+
 `-i [path to file]` Specify an input file. Can be used multiple times to input multiple files, for example, video and audio, or multiple languages, subtitles, etc.
 
 `-y` Overwrite the output if it exists. 
@@ -132,17 +136,16 @@ You can play a file with all of your options without actually saving it using `f
 
 `-r [number]` Change the framerate of the video.
 
-Specify it before the **input** to change the input framerate which will speed up or slow down the input video. A 30 fps video input as 60 fps will play twice as fast. (This only affects the video, not the audio, but this document is about GIFs, so it's outside its scope) 
+* Specify it before the **input** to change the input framerate which will speed up or slow down the input video. A 30 fps video input as 60 fps will play twice as fast. (This only affects the video, not the audio, but this document is about GIFs, so it's outside its scope) 
+* Specify it before the **output** to change the output framerate which will duplicate or drop frames to achieve the specified FPS *without* changing the apparent speed. The default output framerate is the same as the input. If the input was an image sequence, then the default is 25.
 
-Specify it before the **output** to change the output framerate which will duplicate or drop frames to achieve the specified FPS *without* changing the apparent speed. The default output framerate is the same as the input. If the input was an image sequence, then the default is 25.
+`-vsync [passthrough|cfr|vfr]` Specify how to handle videos with frames that have irregular timestamps. Useful for avoiding duplicate frames when extracting images from certain video, in which case I think the `-vsync vfr` option is the one you want ("vfr" for variable frame rate). Don't worry about this option unless you encounter duplcate images in your image output.)
 
-`-vsync [passthrough|cfr|vfr]` Specify how to handle videos with frames that have irregular timestamps. Useful for avoiding duplicate frames when extracting images from certain video, in which case I think the `-vsync vfr` option is the one you want (for variable frame rate).
+`qscale:v [number]` A quality preset for the video/image portion of the ouput. This applies to codecs that have variable birtate presets and for image outputs like jpeg. A smaller number is higher quality, starting with "0". For jpg, 0, through 2 are all the same. The default is pretty bad, so I always specify 2. Can be abbreviated `-q:v`. (Use `a` instead of `v` for audio quality.) Example: `-q:v 2`
 
-`qscale:v [number]` A quality preset for the video portion of the ouput. This applies to codecs that have variable birtate presets or for image outputs like jpeg. A smaller number is higher quality, starting with "0". For jpg, 0, through 2 are all the same. The default is pretty bad, so I always specify 2. Can be abbreviated `-q:v`. (Use `a` instead of `v` for audio quality.)
+`-ss [timestamp]` Seek to a point in the video and ignores everything before it. If specified **before** the input, it will perform a fast approximate seek, then do an accurate seek as it gets close. This is good for very large files or web files. If specified **after** the input, it decodes the *entire* video until it hits that point. Avoid that. Examples: `-ss 01:00` to seek to 1 minute. The full format is `HH:MM:SS.mmmm`. Can use fractional seconds like `-ss 01:05.333`. Values without a colon are seconds. `120` is two minutes, for example. There are other options, too: https://ffmpeg.org/ffmpeg-utils.html#time-duration-syntax
 
-`-ss [timestamp or value in seconds]` Seek. If specified **before** the input, it will perform a fast approximate seek, then do an accurate seek as it gets close. This is good for very large files or web files. If specified **after** the input, it decodes the entire video until it hits that point. Avoid that. Examples: `-ss 01:00` to seek to 1 minute. The full format is `HH:MM:SS.mmmm`. Can use fractional seconds like `-ss 01:05.333`. Values without a colon are seconds. `120` is two minutes, for example. There are other options, too: https://ffmpeg.org/ffmpeg-utils.html#time-duration-syntax
-
-`-to [timestamp]` When to stop reading the video. Often used with `-ss` to only select a portion of a video. Example: `-ss 01:00 -to 01:05` to take the 5 seconds between 01:00 and 01:05.
+`-to [timestamp]` When to stop reading the video. Often used with `-ss` to only select a portion of a video. Example: `-ss 01:00 -to 01:05` to take just the 5 seconds between 01:00 and 01:05.
 
 `-t` Rather than t timestamp as in `-to`, you can specify a number of seconds to read after seeking, or from the start of a file.
 
@@ -158,7 +161,7 @@ It will look like pretty bad because it will use the default GIF palette, but it
 
 ## Unoptimized GIF with frame skipping
 
-If you don't want your GIF to be the ame high framerate as the source, then you can skip some frames. This uses a video filter called `framestep`. This example will only use every 5th frame, which will result in an output GIF (or video) having 1/5th the framerate of the input video. So a 60 FPS input will end up as 12 FPS, and the other frames are dropped. The speed and duration of the video will remain the same because the frames keep their original timestamps; it will just look choppier. This is often desireable for a GIF.
+If you don't want your GIF to be the ame high framerate as the source, then you can skip some frames. This uses a video filter called `framestep`. This example will only use every 5th frame, which will result in an output GIF (or video) having 1/5th the framerate of the input video. So a 60 FPS input will end up as 12 FPS, and the other frames are dropped. The speed and duration of the video will remain the same because the frames keep their original timestamps; it will just look choppier. This is sometimes desireable for a GIF.
 
 `ffmpeg -i video.mp4 -vf framestep=5 video.gif`
 
@@ -168,7 +171,38 @@ Example:
 
 `ffmpeg -i video.mp4 -vf select=not(mod(n\,5)) video.gif`
 
-That does the exact same thing as above. `mod` yields the remainder of dividing the frame number, `n`, by 5. If the frame number is a multiple of 5, then the remainder is 0, and `not` turns that into 1 and `select` will take that frame, otherwise it drops it since `not` turns all other numbers into 0 making `select` ignore them. (Notice the escaped comma since commas are used to separate different filters. See `-vf` above under "Some handy ffmpeg arguments".)
+That does the exact same thing as above. `mod` yields the remainder of dividing the frame number (`n`) by 5. If the frame number is a multiple of 5, then the remainder is 0, and `not` turns that into 1 so `select` will take that frame. Otherwise it drops it since `not` turns all other numbers into 0 making `select` ignore them. (Notice the escaped comma since commas are used to separate multiple filters. See `-vf` above under "Some handy ffmpeg arguments".)
 
 You can do other math in `select` to achieve different selections of frames.
 
+## Unoptimized GIF of a portion of a video
+
+If you don't want the whole video, you can use seek (`-ss`) and to (`-to`) to select a range of the video. The position of -ss relative to the input is important. Read more about it in "Some handy ffmpeg arguments". In short, always put it **before** the input.
+
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 five-seconds.gif`
+
+This makes a 5 second GIF starting at 10 seconds into the video. You can combine this with video filters like the `framestep` above.
+
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf framestep=5 five-seconds-choppy.gif`
+
+## Making an optimized palette GIF
+
+`palettegen` has options that can improve the colors, but it's mostly not needed. For example, you can have a different palette *per frame*. You can read about these things elsewhere.
+
+### Step 1: make the palette
+
+You use the `palettegen` filter and specify a PNG output.
+
+`ffmpeg -i video.mp4 -vf palettegen video-palette.png`
+
+You should use the same "seek" and "to" as your final GIF in order to only look at the colors in that portion of the video. 
+
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -vf palettegen video-palette.png`
+
+### Step 2: use the palette and the input video to make a GIF
+
+You use two inputs and now we have to use a complex filter since `paletteuse` requires two inputs. You specify the inputs first, then the filter name. `[0:v]` means "the video portion of input 0" (the first input). `[1:v]` means the same for the second input, even though it's not a video. Images are considered video in this context. (They certainly aren't audio.) With `-filter_complex`, you use a semicolon, `;` to separate filters, not a comma.
+
+`ffmpeg -i video.mp4 -i video-palette.png -filter_complex [0:v][1:v]paletteuse video.gif`
+
+It's a lot slower than not using a palette, but the results don't look like a GIF from the 90's.
