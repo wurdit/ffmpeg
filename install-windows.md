@@ -2,7 +2,7 @@
 
 ## What you need
 
-1. Download ffmpeg, save it somewhere hany, and configure it in the Windows PATH environment variable.
+1. Download ffmpeg, save it somewhere handy, and configure it in the Windows PATH environment variable.
 2. (Optional) Download either youtube-dl or yt-dlp or both, also configured in the PATH variable.
 
 See the Install instructions below if you don't know how to regiter programs in Windows PATH.
