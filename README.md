@@ -322,7 +322,7 @@ However, there is so much more you can do with ffmpeg than making GIFs. It's wel
 
 ## What's next?
 
-I plan on adding more documentation on how to find the raw URL of a YouTube or Twitch video using youtube-dl and downloading just a part of a video through ffmpeg instead of needing the entire thing. In one command, you can trim out the piece you need and save it to a local file.
+I plan on adding more documentation on how to find the raw URL of a YouTube or Twitch video using youtube-dl and downloading just a part of a video through ffmpeg instead of needing the entire thing. In one command, you can trim out the piece you need and save it to a local file. And also how to combine an image sequence into a GIF if you need to edit individual frames for some reason.
 
 I also want to add more output frames and gifs from the earlier steps.
 
