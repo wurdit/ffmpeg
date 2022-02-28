@@ -8,7 +8,7 @@
 7. Do any of the above using a video that's streamed off a website like YouTube or Twitch instead of having to download the whole thing.
     * I haven't actually tested Twitch yet, but it definitely works on YouTube if you know the actual raw video URL which youtube-dl can give you.
 6. Do any of the above, but instead just extract the frames as a series of JPG files. (Or PNG or whatever)
-8. Take a series of sequentially named JPG files and turn them into a GIF at a specific framerate.
+8. Take a series of sequentially named image files and turn them into a GIF at a specific framerate.
 
 # FFMPEG Basics
 
@@ -95,9 +95,13 @@ The last argument after all of the named ones is the output. (By "named", I mean
 
 This will convert the video to an MKV container, for example. You can specifiy whatever filename and extension you want. ffmpeg will figure out how to make the file or files you asked for.
 
-To output the first frame of the video as an image, just output to a JPG or PNG with whatever name you want.
+To output the first frame of the video as an image, just output to a JPG or PNG with whatever name you want. This will give you a warning, but it works. 
 
 `ffmpeg -i video.mp4 first-frame.jpg`
+
+To avoid the warning, use `-frames:v 1` to tell ffmpeg to only take one frame.
+
+`ffmpeg -i video.mp4 -frames:v 1 first-frame.jpg`
 
 That's not very useful, so here's a command to get *all* frames as a sequence of JPG files. I want them all in a subfolder, so I put the subfolder name then a slash, then the output file name. **NOTE**: You have to make the output folder first. I use `mkdir` here to do it. As always, use quotes if your path has spaces.
 
@@ -175,11 +179,11 @@ Example:
 
 That does the exact same thing as above. `mod` yields the remainder of dividing the frame number (`n`) by 5. If the frame number is a multiple of 5, then the remainder is 0, and `not` turns that into 1 so `select` will take that frame. Otherwise it drops it since `not` turns all other numbers into 0 making `select` ignore them. (Notice the escaped comma since commas are used to separate multiple filters. See `-vf` above under "Some handy ffmpeg arguments".)
 
-You can do other math in `select` to achieve different selections of frames.
+You can do other math in `select` to achieve different selections of frames. That's not in the scope of the document, though.
 
 ## Unoptimized GIF of a portion of a video
 
-If you don't want the whole video, you can use seek (`-ss`) and to (`-to`) to select a range of the video. The position of -ss relative to the input is important. Read more about it in "Some handy ffmpeg arguments". In short, always put it **before** the input.
+If you don't want the whole video, you can use seek (`-ss`) and to (`-to`) to select a range of the video. The position of `-ss` in the command relative to the input is important. Read more about it in "Some handy ffmpeg arguments". In short, always put it **before** the input unless it seems inaccurate.
 
 `ffmpeg -ss 00:10 -to 00:15 -i video.mp4 five-seconds.gif`
 
@@ -189,7 +193,7 @@ This makes a 5 second GIF starting at 10 seconds into the video. You can combine
 
 ## Making an optimized palette GIF
 
-`palettegen` has options that can improve the colors, but it's mostly not needed. For example, you can have a different palette *per frame*. You can read about these things elsewhere.
+To generate a good palette, we use the `palettegen` filter. It has options that can improve the colors, but they're usually not needed. For example, you can have a different palette *per frame*. You can read about these options elsewhere.
 
 ### Step 1: make the palette
 
@@ -207,12 +211,58 @@ You use two inputs and now we have to use a complex filter since `paletteuse` re
 
 `ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -i video-palette.png -filter_complex [0:v][1:v]paletteuse video.gif`
 
-It's a lot slower than not using a palette, but the results don't look like a GIF from the 90's.
+It's a lot slower than not using a custom palette, but the results don't look like a GIF from the 90's.
 
 ### Doing it in one step
 
-If you care, you can do it all in one step and not save the palette to the disk. This time, I added spaces to aid readability, so quotes are used. This takes the first input's video stream, `[0:v]`, and runs `palettegen` on it and creates a temporary output stream named "pal", which is out palette. Then the video and "pal" are sent to `peletteuse`. This results in an identical GIF as above.
+If you care, you can do it all in one step and not save the palette to the disk. This time, I added spaces to aid readability, so quotes are used. This takes the first input's video stream, `[0:v]`, and runs `palettegen` on it and creates a temporary output stream named "pal", which is our palette. Then the video and "pal" are sent to `peletteuse`. This results in an identical GIF as above.
 
-`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -i video-palette.png -filter_complex "[0:v] palettegen [pal]; [0:v][pal] paletteuse" one-step-palette.gif`
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -i video-palette.png -filter_complex "[0:v] palettegen [pal]; [0:v][pal] paletteuse" one-step.gif`
+
+## Cropping the input
+
+The `crop` filter takes the follwing settings: `width:height:x:y`. E.g., `-vf crop=256:256:100:100`. This makes a 256x256 px crop that starts 100 pixels in from the left, and 100 pixels down from the top. Rather than guessing, grab one screen with ffmpeg, and then use Photoshop or Paint to make your desired selection and find the top-left pixel and size of that selection. If you have Photoshop I'll assume you know how to do that using the Info window, so I'll only explain Paint.
+
+### Grab one frame for reference
+
+Use `-ss` to seek to the part of the video where you want your GIF to start, then grab one frame as a PNG. You don't need `-to` since we are going to specify `-frames:v 1` to limit the output to one frame. Even that's not required, but you'll get a warning.
+
+`ffmpeg -ss 00:10 -i video.mp4 -frames:v 1 frame.png`
+
+### Using Paint to find crop settings
+
+1. Open your frame in Paint and zoom out until it fits comfortably in the window.
+    * Zoom into just the section you want for more precise measurements.
+3. Using the Select tool, start drawing a box around the area you want, **but do not let go!**
+4. Look at the numbers circled in red at the bottom of the window: https://i.imgur.com/my0JUFI.png
+    * The first set of numbers is the x,y position of the top-left pixel of your selection.
+    * The second set is the width and height.
+    * If you don't see the first set of numbers, it's because you let go of the mouse in step 2. Don't do that.
+5. Get the size of the box *about* the size you want. If it's about 580 x 580, but your selection is actually 577 x 579, don't try to make it perfect; it's not important. Just note that 580 x 580 is what you want.
+6. Memorize all the numbers before you let go of the mouse then format your `crop` filter.
+
+In the above example, the size can be rounded to 580 x 580, and the top-left pixel is (477, 301), so our crop command is `crop=580:580:477:301`. Super easy!
+
+I'll make a new frame using this filter:
+
+`ffmpeg -ss 00:10 -i video.mp4 -vf crop=580:580:477:301 -frames:v 1 cropped-frame.png`
+
+Result: https://i.imgur.com/6UyWyfb.png Perfect! No guesswork involved.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
