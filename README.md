@@ -134,6 +134,8 @@ You'll see these in the exmples. You don't necessarily need to read and understa
 
 `-vf "filter1=settings,filter2=settings"` Apply video filters like cropping, scaling, deinterlacing, frame skipping, or dozens of other possible commands. See: https://ffmpeg.org/ffmpeg-filters.html for a full list. Not all filters have or need settings. Quotes are only required if there are spaces in the filter list. If you need a comma inside a filter's settings, it needs to be escaped with a backslash, like `select=mod(n\,10),yadif`. The comma after `mod` is for separating the two arguments to the `mod` function, and `yadif` is a second filter with no settings. If you didn't escape the first comma, it makes it look like it's starting a new video filter to the `-vf` parser, so it needs to be escaped to prevent that or you'll get an error.
 
+`-filter_complex` Let's you specify multiple inputs and map them to various filters. You can also create temporary streams in one filter and use them in later filters. I will go into this only as needed in the exmaples.
+
 `-r [number]` Change the framerate of the video.
 
 * Specify it before the **input** to change the input framerate which will speed up or slow down the input video. A 30 fps video input as 60 fps will play twice as fast. (This only affects the video, not the audio, but this document is about GIFs, so it's outside its scope) 
@@ -203,6 +205,14 @@ You should use the same "seek" and "to" as your final GIF in order to only look 
 
 You use two inputs and now we have to use a complex filter since `paletteuse` requires two inputs. You specify the inputs first, then the filter name. `[0:v]` means "the video portion of input 0" (the first input). `[1:v]` means the same for the second input, even though it's not a video. Images are considered video in this context. (They certainly aren't audio.) With `-filter_complex`, you use a semicolon, `;` to separate filters, not a comma.
 
-`ffmpeg -i video.mp4 -i video-palette.png -filter_complex [0:v][1:v]paletteuse video.gif`
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -i video-palette.png -filter_complex [0:v][1:v]paletteuse video.gif`
 
 It's a lot slower than not using a palette, but the results don't look like a GIF from the 90's.
+
+### Doing it in one step
+
+If you care, you can do it all in one step and not save the palette to the disk. This time, I added spaces to aid readability, so quotes are used. This takes the first input's video stream, `[0:v]`, and runs `palettegen` on it and creates a temporary output stream named "pal", which is out palette. Then the video and "pal" are sent to `peletteuse`. This results in an identical GIF as above.
+
+`ffmpeg -ss 00:10 -to 00:15 -i video.mp4 -i video-palette.png -filter_complex "[0:v] palettegen [pal]; [0:v][pal] paletteuse" one-step-palette.gif`
+
+
