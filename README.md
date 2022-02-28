@@ -2,7 +2,7 @@
 
 1. Extract all frames from a video as numbered jpg files (or PNG or whatever).
 2. Extract all frames from only a portion of a video.
-3. Extract only every "Nth" frame, like every other frame or every 3rd frame. etc.
+3. Extract only every "Nth" frame, like every 2nd frame or every 3rd frame, etc.
 4. Generate an optimized GIF palette by looking at every frame of an image sequence.
 5. Turn a seqence of image files into a GIF using an optional palette.
 6. Directly download a video from the web while doing any or all of the above. 
@@ -26,13 +26,13 @@ Quotes are required if there are any spaces. If the video is in the current fold
 
 `ffmpeg -i video.mp4`
 
-In the output below, everything above "Input #0" is the version info and options this particular EXE was built with. You can hide this info with the `-hide_banner` option.
+In the full output below, everything above "Input #0" is the version info and options this particular EXE was built with. You can hide this info with the `-hide_banner` option.
 
 Notice the video stream info in this line:
 
 `Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, smpte170m/bt470bg/smpte170m, progressive), 854x480 [SAR 1:1 DAR 427:240], 1001 kb/s, 30 fps, 30 tbr, 30k tbn (default)`
 
-It contains some information stats about the video stream. A siilar line will appear for the audio track(s) if present.
+It contains some information about the video stream. A siilar line will appear for the audio track(s) if present.
 
 Full output:
 
@@ -87,11 +87,11 @@ At least one output file must be specified
 
 ## Overwritting a file
 
-If you don't specify otherwise, ffmpeg will ask you if you want to overwrite the output file if it already exists. You can just say "yes" or "no" every time by using `-y` or `-n`, respectively.
+If you don't specify otherwise, ffmpeg will ask you if you want to overwrite the output file if it already exists. Rather than having to answer that prompt every time, you can specify your answer in the command by using `-y` or `-n`.
 
 `ffmpeg -y -i video.mp4 video.mkv`
 
-When trying different commands over and over to try to get the desired result, I usually add `-y`, but I will omit this from the examples.
+When trying different commands over and over to get the desired result, I usually add `-y`, but I will omit this from the examples.
 
 ## Just playing a file
 
@@ -99,17 +99,19 @@ You can play a file with all of your options without actually saving it using `f
 
 `ffplay -i video.mp4`
 
-## Common arguments
+## Some handy ffmpeg arguments
 
-`-i` Specify an input file. Can me used multiple times to input multiple files, for example, video and audio, or multiple languages, subtitles, etc.
+`-i [path to file]` Specify an input file. Can be used multiple times to input multiple files, for example, video and audio, or multiple languages, subtitles, etc.
 
-`-y` Overwrite the output if it exists
+`-y` Overwrite the output if it exists. 
 
-`-vf` Apply video filters like cropping, scaling, deinterlacing, frame skipping, or dozens of other possible commands. See: https://ffmpeg.org/ffmpeg-filters.html for a full list.
+`-vf "filter1=settings,filter2=settings"` Apply video filters like cropping, scaling, deinterlacing, frame skipping, or dozens of other possible commands. See: https://ffmpeg.org/ffmpeg-filters.html for a full list.
 
-`-r` Change the framerate of the video.
+`-r [number]` Change the framerate of the video. Specify it before the input to change the input framerate which will speed up or slow down the input video, or before the output to change the output framerate which will duplicate or drop frames to achieve the specified FPS *without* changing the apparent speed.
 
-`-vsync` Specify how to handle videos with frames that don't fit perfectly into their time signature.
+`-vsync [passthrough|cfr|vfr]` Specify how to handle videos with frames that have irregular timestamps. Useful for avoiding duplicate frames when extracting images from certain video, in which case I think the `-vsync vfr` option is the one you want (for variable frame rate).
+
+`qscale:v [number]` A quality preset for the video portion of the ouput. This applies to codecs that have variable birtate presets or for image outputs like jpeg. A smaller number is higher quality, starting with "0". For jpg, 0, through 2 are all the same. The default is pretty bad, so I always specify 2. Can be abbreviated `-q:v`. (Use `a` instead of `v` for audio quality.)
 
 ## Output file
 
