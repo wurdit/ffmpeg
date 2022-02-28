@@ -283,7 +283,7 @@ Now let's make an unoptimized GIF to test all of this. We add back an a precise 
 
 #### A long-winded note on finding a precise time stamp for -ss and -to
 
-You should probably just skip this section. You most often don't care about absolute precision. But sometimes you do, and it can be a pain to find the timestamp of the exact frame you want.
+You should probably just skip to [Putting it all together!](https://github.com/wurdit/ffmpeg/blob/main/README.md#putting-everything-together). You most often don't care about absolute precision. But sometimes you do, and it can be a pain to find the timestamp of the exact frame you want.
 
 In order to find this precise seek value, I used my media player, MPC-HC (Media Player Classic - Home Cinema) since it has a precise time display down to the millisecond. You can just use trial and error, if you prefer. More on that below. MPC-HC no longer being supported, but the latest version works fine. I had to convert my 16 second video to an uncompressed format so I could framestep forward and backwards and still get accurate frame time stamps. Advanced codecs like h264 don't like playing backwards, so the timestamps become inaccurate as soon as you framestep backwards. I had to use a codec the internal LAV filters in MPC-HC supports, and v410 is one (Uncompressed 4:4:4 10-bit video). I also had to use an mkv container since mp4 doesn't support that codec.
 
