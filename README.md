@@ -1,7 +1,7 @@
 #  GIF-related tasks ffmpeg can do:
 
 1. Extract all frames from a video as numbered jpg files (or PNG or whatever).
-2. Extract all frames from only a portion of a video.
+2. Extract all frames from only *a portion* of a video.
 3. Extract only every "Nth" frame, like every 2nd frame or every 3rd frame, etc.
 4. Generate an optimized GIF palette by looking at every frame of an image sequence.
 5. Turn a seqence of image files into a GIF using an optional palette.
@@ -22,17 +22,17 @@ Doing this without any output specified produces an error, "At least one output 
 
 `ffmpeg -i "C:\path\to\your\video.mp4"`
 
-Quotes are required if there are any spaces. If the video is in the current folder, you can omit the path and just use the file name.
+Quotes areonly required if there are spaces in the path. If the video is in the current directory, you can omit the path and just use the file name.
 
 `ffmpeg -i video.mp4`
 
-In the full output below, everything above "Input #0" is the version info and options this particular EXE was built with. You can hide this info with the `-hide_banner` option.
+In the full output below, everything above "Input #0" is the version and build info. You can hide this info with the `-hide_banner` option.
 
 Notice the video stream info in this line:
 
 `Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(tv, smpte170m/bt470bg/smpte170m, progressive), 854x480 [SAR 1:1 DAR 427:240], 1001 kb/s, 30 fps, 30 tbr, 30k tbn (default)`
 
-It contains some information about the video stream. A siilar line will appear for the audio track(s) if present.
+It contains some information about the video stream. A similar line will appear for the audio streams, other video streams, and subtitle streams.
 
 Full output:
 
@@ -66,8 +66,6 @@ At least one output file must be specified
 
 If you instead use `ffmpeg -hide_banner -i video.mp4` you get less junk on top:
 
-In the examples, I will omit the `-hide_banner` argument, but using it can be nice.
-
 ```
 Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'video.mp4':
   Metadata:
@@ -84,6 +82,16 @@ Input #0, mov,mp4,m4a,3gp,3g2,mj2, from 'video.mp4':
       encoder         : Elemental H.264
 At least one output file must be specified
 ```
+
+In the examples, I will omit the `-hide_banner` argument, but using it can be nice.
+
+## Output file
+
+The last argument after all of the named parameters is the output.
+
+`ffmpeg -hide_banner -i video.mp4 video.mkv`
+
+This will convert the video to an MKV container, for example.
 
 ## Overwritting a file
 
@@ -105,21 +113,25 @@ You can play a file with all of your options without actually saving it using `f
 
 `-y` Overwrite the output if it exists. 
 
-`-vf "filter1=settings,filter2=settings"` Apply video filters like cropping, scaling, deinterlacing, frame skipping, or dozens of other possible commands. See: https://ffmpeg.org/ffmpeg-filters.html for a full list.
+`-vf "filter1=settings,filter2=settings"` Apply video filters like cropping, scaling, deinterlacing, frame skipping, or dozens of other possible commands. See: https://ffmpeg.org/ffmpeg-filters.html for a full list. Not all filters have or need settings. Quotes are only required if there are spaces in the filter list. If you need a comma inside one filter setting, it needs to be escaped with a backslash, like `select=mod(n\,10),yadif`. The comma after `mod` is for separating The two arguments to the `mod` function. That makes it look like it's starting a new video filter to the `-vf` parser, so it needs to be escaped to prevent that.
 
-`-r [number]` Change the framerate of the video. Specify it before the input to change the input framerate which will speed up or slow down the input video, or before the output to change the output framerate which will duplicate or drop frames to achieve the specified FPS *without* changing the apparent speed.
+`-r [number]` Change the framerate of the video.
+
+Specify it before the **input** to change the input framerate which will speed up or slow down the input video. A 30 fps video input as 60 fps will play twice as fast. (This only affects the video, not the audio, but this document is about GIFs, so it's outside its scope) 
+
+Specify it before the **output** to change the output framerate which will duplicate or drop frames to achieve the specified FPS *without* changing the apparent speed. The default output framerate is the same as the input. If the input was an image sequence, then the default is 25.
 
 `-vsync [passthrough|cfr|vfr]` Specify how to handle videos with frames that have irregular timestamps. Useful for avoiding duplicate frames when extracting images from certain video, in which case I think the `-vsync vfr` option is the one you want (for variable frame rate).
 
 `qscale:v [number]` A quality preset for the video portion of the ouput. This applies to codecs that have variable birtate presets or for image outputs like jpeg. A smaller number is higher quality, starting with "0". For jpg, 0, through 2 are all the same. The default is pretty bad, so I always specify 2. Can be abbreviated `-q:v`. (Use `a` instead of `v` for audio quality.)
 
-## Output file
+`-ss [timestamp or value in seconds]` Seek. If specified **before** the input, it will perform a fast approximate seek, then do an accurate seek as it gets close. This is good for very large files or web files. If specified **after** the input, it decodes the entire video until it hits that point. Avoid that. Examples: `-ss 01:00` to seek to 1 minute. The full format is `HH:MM:SS.mmmm`. Can use fractional seconds like `-ss 01:05.333`. Values without a colon are seconds. `120` is two minutes, for example. There are other options, too: https://ffmpeg.org/ffmpeg-utils.html#time-duration-syntax
 
-The last argument after all of the named parameters is the output.
+`-to [timestamp]` When to stop reading the video. Often used with `-ss` to only select a portion of a video. Example: `-ss 01:00 -to 01:05` to take the 5 seconds between 01:00 and 01:05.
 
-`ffmpeg -hide_banner -i video.mp4 video.mkv`
+`-t` Rather than t timestamp as in `-to`, you can specify a number of seconds to read after seeking, or from the start of a file.
 
-This will convert the video to an MKV container, for example.
+You'll see some of these in the examples.
 
 # Example Usage
 
@@ -131,4 +143,17 @@ It will look like pretty bad because it will use the default GIF palette, but it
 
 ## Unoptimized GIF with frame skipping
 
-`ffmpeg -i video.mp4 -
+If you don't want your GIF to be the ame high framerate as the source, then you can skip some frames. This uses a video filter called `framestep`. This example will only use every 5th frame, which will result in an output GIF (or video) having 1/5th the framerate of the input video. So a 60 FPS input will end up as 12 FPS, and all the other frames are dropped. The speed and duration of the video will remain the same because the frames keep their original timestamps. It will just look choppier.
+
+`ffmpeg -i video.mp4 -vf framestep=5 video.gif`
+
+Examples often found on the web use the `select` filter and then a math expression to select only frames where the math expression evaluates to `1`. They use functions like `mod` which finds remainders after division, and the variable `n` which is the frame number. Maybe these are from before `framestep` existed. I dunno.
+
+Example: 
+
+`ffmpeg -i video.mp4 -vf select=not(mod(n\,5)) video.gif`
+
+That does the exact same thing as above. `mod` yields the remainder of dividing the frame number, `n`, by 5. If the frame number is a multiple of 5, then the remainder is 0, and `not` turns that into 1 and `select` will take that frame, otherwise it drops it since `not` turns all other numbers into 0 making `select` ignore them. (Notice the escaped comma since commas are used to separate different filters. See `-vf` above under "Some handy ffmpeg arguments".)
+
+You can do other math in `select` to achieve different selections of frames.
+
