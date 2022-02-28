@@ -306,12 +306,25 @@ I like MPC-HC for it's classic appearance and excellent features, including a pr
 
 ## Putting everything together!
 
-We're so close! Time to add in the `palettegen` which requires we convert our crop and scale to the `-filter_complex` syntax. We'll do it in one step.
+We're so close! Time to add in the `palettegen` which requires we convert our crop and scale to the `-filter_complex` syntax. We'll do the `palettegen` and `paletteuse` in one step, too. It gets a little messier this time since we have to use the `split` filter. The source stream `[0:v]` is available to every node in the filtergraph, but our temporary streams are not. They can each only be used once. If we want to use them twice, we have to use `split` to create two streams from one. We don't want to use the source stream for our `paletteuse` step or we won't have our crap and scale, so we have to split the `[scaled]` stream into `[scaled1]` and `[scaled2]`, use one for `palettegen` and the other for `paletteuse`.
 
-`ffmpeg -ss 00:09.8 -to 00:12.067 -i video.mp4 -filter_complex crop=580:580:477:301,scale=256:256:flags=lanczos cropped-scaled.gif`
+Here's a sketch of the filtergraph we create below: https://i.imgur.com/xWibb3c.png
 
-"[0:v] palettegen [pal]; [0:v][pal] paletteuse"
+`ffmpeg -ss 00:09.8 -to 00:12.067 -i video.mp4 -filter_complex "[0:v] crop=580:580:477:301 [cropped]; [cropped] scale=256:256 [scaled]; [scaled] split [scaled1][scaled2];[scaled1] palettegen [pal]; [scaled2][pal] paletteuse" sad-grogu.gif`
 
+Output: https://i.imgur.com/T1dmwfH.gif
+
+That's it! We now have the perfect GIF in one relatively small command.
+
+Once you understand all of the individual pieces, writing a command like this only takes a couple of minutes. Just take a soure video, find the timestamps and the crop rectangle, and the rest is the same every time. I find this method a lot less tedious than trying to extract frames by hand and building the GIF in Photoshop. But that's only because I'm so familiar with the program, and I admit it's a pretty steep learning curve. I hope someone got some value out of this.
+
+However, there is so much more you can do with ffmpeg than making GIFs. It's well worth taking the time to learn. Got some stuck pixels in your camera that are always bright green in your YouTube videos? It's super easy to mask them with surrounding data with a simple filter. Don't buy a new camera! Want to add a logo or text overlay? Easy. The best part is: you can put these types commands in a batch file and drag-and-drop a video onto it and out pops the result.
+
+## What's next?
+
+I plan on adding more documentation on how to find the raw URL of a YouTube or Twitch video using youtube-dl and downloading just a part of a video through ffmpeg instead of needing the entire thing. In one command, you can trim out the piece you need and save it to a local file.
+
+I also want to add more output frames and gifs from the earlier steps.
 
 
 
